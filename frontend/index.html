@@ -507,8 +507,12 @@
   </footer>
 
   <script>
-    const API_URL = "http://localhost:5000/api/chat";
-    const HEALTH_URL = "http://localhost:5000/api/health";
+    const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const API_BASE = isLocal
+      ? "http://localhost:5000"
+      : "https://shopsense-backend-8vog.onrender.com";
+    const API_URL = `${API_BASE}/api/chat`;
+    const HEALTH_URL = `${API_BASE}/api/health`;
 
     const chatScroll = document.getElementById("chat-scroll");
     const form = document.getElementById("composer");
