@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ShopSense — Real-Time Product Recommendations</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%8D%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#faf7ff;
+    --ink:#161221;
+    --violet:#7c3aed;
+    --violet-deep:#4c1d95;
+    --pink:#ff4d8d;
+    --yellow:#ffd447;
+    --mint:#00d9a3;
+    --paper:#ffffff;
+  }
+  html,body{background:var(--bg); font-family:'Plus Jakarta Sans',sans-serif; color:var(--ink);}
+  .font-display{font-family:'Unbounded',sans-serif;}
+  .font-mono{font-family:'Space Mono',monospace;}
+
+  /* ==========================================================================
+     Utility layer — hand-written replacement for Tailwind's CDN script.
+     The Tailwind CDN generates these classes with JavaScript at runtime; if
+     that script is blocked (ad-blocker, offline, firewall) every layout
+     class silently does nothing while the custom CSS below still works,
+     which is what caused the "everything flush left" layout bug. Writing
+     the exact utilities this page uses as plain CSS removes that dependency
+     entirely — the layout now works with zero external script required.
+     ========================================================================== */
+  .flex{display:flex;} .inline-flex{display:inline-flex;} .grid{display:grid;}
+  .hidden{display:none;} .block{display:block;} .inline-block{display:inline-block;}
+  .flex-col{flex-direction:column;} .flex-wrap{flex-wrap:wrap;} .flex-1{flex:1 1 0%;}
+  .items-center{align-items:center;} .items-end{align-items:flex-end;}
+  .justify-between{justify-content:space-between;} .justify-center{justify-content:center;}
+  .justify-end{justify-content:flex-end;} .justify-start{justify-content:flex-start;}
+  .gap-1{gap:.25rem;} .gap-1\.5{gap:.375rem;} .gap-2{gap:.5rem;} .gap-3{gap:.75rem;} .gap-10{gap:2.5rem;}
+  .w-10{width:2.5rem;} .w-2{width:.5rem;} .w-full{width:100%;} .w-1\/2{width:50%;}
+  .h-10{height:2.5rem;} .h-2{height:.5rem;}
+  .min-h-0{min-height:0;} .min-h-screen{min-height:100vh;}
+  .max-w-3xl{max-width:48rem;} .max-w-\[80\%\]{max-width:80%;} .max-w-\[85\%\]{max-width:85%;}
+  .mx-auto{margin-left:auto; margin-right:auto;}
+  .mb-1{margin-bottom:.25rem;} .mb-1\.5{margin-bottom:.375rem;} .mb-2{margin-bottom:.5rem;}
+  .mb-3{margin-bottom:.75rem;} .mb-4{margin-bottom:1rem;}
+  .mt-1{margin-top:.25rem;} .mt-2{margin-top:.5rem;} .mt-3{margin-top:.75rem;} .mt-3\.5{margin-top:.875rem;}
+  .ml-1{margin-left:.25rem;}
+  .pt-12{padding-top:3rem;} .pb-10{padding-bottom:2.5rem;}
+  .px-1{padding-left:.25rem; padding-right:.25rem;} .px-2{padding-left:.5rem; padding-right:.5rem;}
+  .px-2\.5{padding-left:.625rem; padding-right:.625rem;} .px-3{padding-left:.75rem; padding-right:.75rem;}
+  .px-3\.5{padding-left:.875rem; padding-right:.875rem;} .px-4{padding-left:1rem; padding-right:1rem;}
+  .px-5{padding-left:1.25rem; padding-right:1.25rem;}
+  .py-0\.5{padding-top:.125rem; padding-bottom:.125rem;} .py-1{padding-top:.25rem; padding-bottom:.25rem;}
+  .py-1\.5{padding-top:.375rem; padding-bottom:.375rem;} .py-2{padding-top:.5rem; padding-bottom:.5rem;}
+  .py-2\.5{padding-top:.625rem; padding-bottom:.625rem;} .py-3{padding-top:.75rem; padding-bottom:.75rem;}
+  .py-4{padding-top:1rem; padding-bottom:1rem;}
+  .p-2{padding:.5rem;} .p-4{padding:1rem;} .p-5{padding:1.25rem;} .pr-1{padding-right:.25rem;}
+  .rounded-full{border-radius:9999px;} .rounded-lg{border-radius:.5rem;}
+  .rounded-md{border-radius:.375rem;} .rounded-xl{border-radius:.75rem;} .rounded-2xl{border-radius:1rem;}
+  .text-xs{font-size:.75rem; line-height:1rem;} .text-sm{font-size:.875rem; line-height:1.25rem;}
+  .text-base{font-size:1rem; line-height:1.5rem;} .text-lg{font-size:1.125rem; line-height:1.75rem;}
+  .text-xl{font-size:1.25rem; line-height:1.75rem;} .text-3xl{font-size:1.875rem; line-height:2.25rem;}
+  .text-4xl{font-size:2.25rem; line-height:2.5rem;}
+  .text-\[10px\]{font-size:10px;} .text-\[11px\]{font-size:11px;}
+  .font-bold{font-weight:700;} .font-extrabold{font-weight:800;} .font-normal{font-weight:400;}
+  .leading-none{line-height:1;} .leading-tight{line-height:1.25;} .leading-relaxed{line-height:1.625;}
+  .leading-\[1\.05\]{line-height:1.05;}
+  .tracking-wide{letter-spacing:.025em;}
+  .underline{text-decoration-line:underline;}
+  .relative{position:relative;}
+  .z-10{z-index:10;}
+  .overflow-hidden{overflow:hidden;} .overflow-x-hidden{overflow-x:hidden;} .overflow-y-auto{overflow-y:auto;}
+  .cursor-pointer{cursor:pointer;}
+  .bg-transparent{background-color:transparent;}
+  .resize-none{resize:none;}
+  .space-y-4 > * + *{margin-top:1rem;}
+  .border-b-\[2\.5px\]{border-bottom-width:2.5px; border-bottom-style:solid;}
+  .border-t-\[2\.5px\]{border-top-width:2.5px; border-top-style:solid;}
+  .focus\:outline-none:focus{outline:none;}
+  .placeholder\:text-stone-400::placeholder{color:#a8a29e;}
+  @media (min-width:640px){
+    .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .sm\:text-\[2\.7rem\]{font-size:2.7rem;}
+    .sm\:text-base{font-size:1rem; line-height:1.5rem;}
+  }
+  @media (min-width:768px){
+    .md\:grid-cols-\[1\.1fr_\.9fr\]{grid-template-columns:1.1fr .9fr;}
+    .md\:justify-end{justify-content:flex-end;}
+  }
+  /* ========================================================================== */
+
+  .dotgrid::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:radial-gradient(circle, rgba(22,18,33,0.08) 1.5px, transparent 1.5px);
+    background-size:22px 22px;
+  }
+  .blob{
+    position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; z-index:0;
+    animation: drift 9s ease-in-out infinite;
+  }
+  @keyframes drift{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(14px,-18px) scale(1.06); }
+  }
+
+  /* ---------- hype marquee banner ---------- */
+  .marquee-wrap{
+    overflow:hidden; background:var(--ink);
+    border-bottom:2.5px solid var(--ink);
+    position:relative; z-index:10;
+  }
+  .marquee-track{
+    display:flex; width:max-content;
+    animation: marquee 16s linear infinite;
+  }
+  .marquee-track span{
+    white-space:nowrap; padding:.5rem 1.75rem;
+    font-family:'Space Mono',monospace; font-weight:700; font-size:.75rem;
+    letter-spacing:.03em;
+  }
+  @keyframes marquee{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  /* ---------- floating decorative stickers ---------- */
+  .float-deco{
+    position:absolute; z-index:0; pointer-events:none;
+    font-size:1.6rem; opacity:.85;
+    animation: floatY 5s ease-in-out infinite;
+  }
+  @keyframes floatY{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    50%{ transform:translateY(-16px) rotate(10deg); }
+  }
+
+  /* ---------- gradient animated accent text ---------- */
+  .grad-text{
+    background: linear-gradient(90deg, var(--violet), var(--pink), var(--yellow), var(--violet));
+    background-size:300% 100%;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation: gradientShift 5s ease infinite;
+  }
+  @keyframes gradientShift{
+    0%{ background-position:0% 50%; }
+    50%{ background-position:100% 50%; }
+    100%{ background-position:0% 50%; }
+  }
+
+  /* ---------- neo-brutalist primitives ---------- */
+  .nb{
+    background:var(--paper);
+    border:2.5px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  .nb-btn{
+    position:relative; overflow:hidden;
+    border:2.5px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .nb-btn::after{
+    content:""; position:absolute; top:0; left:-60%; width:35%; height:100%;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
+    transform:skewX(-20deg);
+    transition: left .5s ease;
+  }
+  .nb-btn:hover::after{ left:130%; }
+  .nb-btn:hover{ transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--ink); }
+  .nb-btn:active{ transform:translate(2px,2px) scale(.97); box-shadow:1px 1px 0 var(--ink); }
+
+  .logo-box:hover{ animation: wiggle .5s ease; }
+  @keyframes wiggle{
+    0%,100%{ transform:rotate(0); }
+    25%{ transform:rotate(-10deg); }
+    75%{ transform:rotate(10deg); }
+  }
+
+  .sticker{
+    border:2.5px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    font-family:'Space Mono',monospace;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .sticker:hover{ transform: translateY(-4px) scale(1.03) !important; box-shadow: 5px 5px 0 var(--ink); }
+  .sticker:active{ transform: translateY(-1px) scale(.98) !important; box-shadow: 2px 2px 0 var(--ink); }
+
+  /* ---------- hero recommendation card stack ---------- */
+  .card-stack{ position:relative; width:270px; height:250px; perspective:700px; }
+  .rec-card{
+    position:absolute; inset:0;
+    border-radius:20px;
+    border:2.5px solid var(--ink);
+    background:var(--paper);
+  }
+  .rec-card.back{
+    transform: rotate(-9deg) translate(-6px,6px);
+    background:var(--mint);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .rec-card.mid{
+    transform: rotate(7deg) translate(8px,2px);
+    background:var(--yellow);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .rec-card.front{
+    transform: rotate(-2deg);
+    box-shadow: 6px 6px 0 var(--ink);
+    animation: floaty 4s ease-in-out infinite;
+    transition: transform .15s ease-out, box-shadow .15s ease-out;
+    cursor:grab;
+  }
+  .rec-card.front:hover{ box-shadow: 8px 10px 0 var(--ink); }
+  @keyframes floaty{
+    0%,100%{ transform: rotate(-2deg) translateY(0); }
+    50%{ transform: rotate(-2deg) translateY(-7px); }
+  }
+  .ribbon{
+    position:absolute; top:-10px; right:-12px;
+    background:var(--pink); color:#fff;
+    border:2.5px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    transform: rotate(9deg);
+    animation: ribbonPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes ribbonPulse{
+    0%,100%{ transform:rotate(9deg) scale(1); }
+    50%{ transform:rotate(9deg) scale(1.08); }
+  }
+
+  /* ---------- confetti ---------- */
+  .confetti-piece{
+    position:fixed; width:8px; height:8px;
+    border:1.5px solid var(--ink); border-radius:2px;
+    pointer-events:none; z-index:60;
+    animation: confettiPop .7s ease-out forwards;
+  }
+  @keyframes confettiPop{
+    0%{ transform:translate(0,0) rotate(0deg); opacity:1; }
+    100%{ transform:translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity:0; }
+  }
+
+  /* ---------- chat bubbles ---------- */
+  .msg-user{
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+    color:#fff;
+    border:2.5px solid var(--ink);
+    border-radius:16px 16px 3px 16px;
+    box-shadow: 4px 4px 0 var(--ink);
+    animation: popIn .3s ease-out;
+  }
+  .msg-bot{
+    background:#fff;
+    border:2.5px solid var(--ink);
+    border-radius:16px 16px 16px 3px;
+    box-shadow: 4px 4px 0 var(--ink);
+    animation: popIn .3s ease-out;
+  }
+  @keyframes popIn{
+    from{ opacity:0; transform:scale(.94) translateY(6px); }
+    to{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  .msg-bot h3, .msg-bot strong{ color:var(--violet-deep); }
+  .msg-bot a{ color:var(--pink); text-decoration:underline; text-underline-offset:2px; font-weight:600; }
+  .msg-bot ul{ list-style:none; padding-left:0; margin:.5rem 0; }
+  .msg-bot li{
+    padding:.55rem .7rem;
+    margin-bottom:.4rem;
+    border-left:3px solid var(--violet);
+    background:#f4effe;
+    border-radius:6px;
+    font-size:.92rem;
+  }
+  .msg-bot p{ margin-bottom:.5rem; }
+  .msg-bot p:last-child{ margin-bottom:0; }
+
+  .ticker-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--violet);
+    animation: bounceDot .9s infinite ease-in-out;
+  }
+  .ticker-dot:nth-child(2){ animation-delay:.15s; background:var(--pink); }
+  .ticker-dot:nth-child(3){ animation-delay:.3s; background:var(--yellow); }
+  @keyframes bounceDot{
+    0%,80%,100%{ transform:translateY(0); opacity:.5; }
+    40%{ transform:translateY(-6px); opacity:1; }
+  }
+
+  #chat-scroll::-webkit-scrollbar{ width:8px; }
+  #chat-scroll::-webkit-scrollbar-thumb{ background:var(--ink); border-radius:4px; }
+
+  .badge-live{ background:var(--mint); color:var(--ink); border:2px solid var(--ink); }
+
+  .status-dot-live{
+    box-shadow:0 0 0 0 rgba(0,217,163,.6);
+    animation: ring 1.8s infinite;
+  }
+  @keyframes ring{
+    0%{ box-shadow:0 0 0 0 rgba(0,217,163,.55); }
+    70%{ box-shadow:0 0 0 7px rgba(0,217,163,0); }
+    100%{ box-shadow:0 0 0 0 rgba(0,217,163,0); }
+  }
+
+  textarea:focus, button:focus-visible{
+    outline: 3px solid var(--yellow);
+    outline-offset: 2px;
+  }
+
+  .rise{ animation: rise .6s cubic-bezier(.2,.7,.3,1) both; }
+  .rise.r1{ animation-delay:0s; }
+  .rise.r2{ animation-delay:.1s; }
+  .rise.r3{ animation-delay:.2s; }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .rise, .status-dot-live, .ticker-dot, .rec-card.front, .blob,
+    .float-deco, .marquee-track, .grad-text, .ribbon, .msg-user, .msg-bot{
+      animation:none !important; opacity:1 !important; transform:none !important;
+    }
+  }
+</style>
+</head>
+<body class="dotgrid min-h-screen flex flex-col overflow-x-hidden">
+
+  <div class="blob" style="width:340px;height:340px; background:var(--violet); top:-80px; left:-100px;"></div>
+  <div class="blob" style="width:280px;height:280px; background:var(--pink); top:60px; right:-90px; animation-delay:2s;"></div>
+  <div class="blob" style="width:260px;height:260px; background:var(--yellow); top:420px; left:40%; animation-delay:4s;"></div>
+
+  <!-- Header -->
+  <header class="relative z-10 border-b-[2.5px]" style="border-color:var(--ink); background:var(--bg);">
+    <div class="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="logo-box w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-lg nb cursor-pointer"
+             style="background:var(--yellow); box-shadow:3px 3px 0 var(--ink);">🛍️</div>
+        <div>
+          <h1 class="font-display font-bold text-lg leading-none" style="color:var(--ink);">ShopSense</h1>
+          <p class="font-mono text-[11px] tracking-wide" style="color:var(--violet-deep);">LIVE PRODUCT ADVISOR</p>
+        </div>
+      </div>
+      <div id="status-badge" class="font-mono text-[11px] px-3 py-1.5 rounded-full nb-btn flex items-center gap-1.5"
+           style="box-shadow:2px 2px 0 var(--ink); background:#fff;">
+        <span class="w-2 h-2 rounded-full" style="background:#999;" id="status-dot"></span>
+        <span id="status-text">checking backend…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hype marquee -->
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span style="color:var(--yellow);">⚡ LIVE PRICES</span>
+      <span style="color:var(--mint);">🔥 TRENDING PICKS</span>
+      <span style="color:var(--pink);">✨ ZERO GUESSWORK</span>
+      <span style="color:#fff;">🛍️ REAL REVIEWS</span>
+      <span style="color:var(--yellow);">⚡ LIVE PRICES</span>
+      <span style="color:var(--mint);">🔥 TRENDING PICKS</span>
+      <span style="color:var(--pink);">✨ ZERO GUESSWORK</span>
+      <span style="color:#fff;">🛍️ REAL REVIEWS</span>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="relative z-10 max-w-3xl w-full mx-auto px-5 pt-12 pb-10 grid md:grid-cols-[1.1fr_.9fr] gap-10 items-center overflow-hidden">
+    <span class="float-deco" style="top:6%; left:2%; animation-delay:.2s;">✨</span>
+    <span class="float-deco" style="top:70%; left:8%; animation-delay:1.4s; font-size:1.2rem;">⭐</span>
+    <span class="float-deco" style="top:15%; left:48%; animation-delay:2.1s; font-size:1.1rem;">💫</span>
+
+    <div class="rise r1">
+      <span class="sticker inline-block font-bold text-[11px] px-3 py-1.5 rounded-full mb-3"
+            style="background:var(--mint); transform:rotate(-2deg);">🇮🇳 MADE FOR INDIA</span><br/>
+      <span class="sticker inline-block font-bold text-[11px] px-3 py-1.5 rounded-full mb-4"
+            style="background:var(--yellow); transform:rotate(1.5deg);">⚡ NO STALE PRICES, EVER</span>
+      <h2 class="font-display font-extrabold text-3xl sm:text-[2.7rem] leading-[1.05] mb-4" style="color:var(--ink);">
+        Shop smarter<br/>with a bot that<br/><span class="grad-text">actually checks.</span>
+      </h2>
+      <p class="text-sm sm:text-base leading-relaxed" style="color:#3a3450;">
+        Tell ShopSense what you're after — a vibe, a budget, a use case — and it'll
+        search the live web before recommending anything. Real ₹ prices, real picks,
+        zero guessing.
+      </p>
+    </div>
+
+    <div class="rise r2 flex justify-center md:justify-end">
+      <div class="card-stack" id="card-stack">
+        <div class="rec-card back"></div>
+        <div class="rec-card mid"></div>
+        <div class="rec-card front p-5 flex flex-col justify-between" id="front-card">
+          <span class="ribbon font-mono text-[10px] font-bold px-2.5 py-1 rounded-md">🔥 TOP PICK</span>
+          <div>
+            <div class="text-4xl mb-2">🎧</div>
+            <p class="font-display font-bold text-base leading-tight" style="color:var(--ink);">Soundcore P20i</p>
+            <p class="font-mono text-xs mt-1" style="color:#6b6480;">★★★★☆ 4.3 · 12k reviews</p>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="font-display font-extrabold text-xl" style="color:var(--violet-deep);">₹1,299</span>
+            <span class="font-mono text-[10px] px-2 py-1 rounded-md" style="background:var(--mint); border:2px solid var(--ink);">LIVE ✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat area -->
+  <main class="flex-1 relative z-10 max-w-3xl w-full mx-auto flex flex-col px-5 py-4 min-h-0">
+
+    <div id="chat-scroll" class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0">
+      <!-- Intro card -->
+      <div class="nb rounded-2xl px-5 py-4 rise r3">
+        <p class="font-display font-bold text-sm mb-1" style="color:var(--violet-deep);">👋 Hey! What are we shopping for?</p>
+        <p class="text-sm leading-relaxed" style="color:#3a3450;">
+          Drop a budget, a use case, or a product you're comparing — I'll search
+          live and come back with real options, not vibes.
+        </p>
+
+        <div class="flex flex-wrap gap-2 mt-3.5" id="quick-prompts">
+          <button type="button" class="sticker quick-prompt rounded-full px-3.5 py-1.5 text-xs font-bold"
+                  style="background:var(--yellow); transform:rotate(-1.5deg);"
+                  data-prompt="best budget wireless earbuds under ₹1500">🎧 earbuds &lt;₹1500</button>
+          <button type="button" class="sticker quick-prompt rounded-full px-3.5 py-1.5 text-xs font-bold"
+                  style="background:var(--pink); color:#fff; transform:rotate(1.5deg);"
+                  data-prompt="best laptop for video editing under ₹90000">💻 editing laptop</button>
+          <button type="button" class="sticker quick-prompt rounded-full px-3.5 py-1.5 text-xs font-bold"
+                  style="background:var(--mint); transform:rotate(-1deg);"
+                  data-prompt="compare the latest robot vacuums for pet hair, prices in India">🤖 robot vacuum</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters toggle -->
+    <div class="flex items-center justify-between mt-3 px-1">
+      <button type="button" id="filters-toggle"
+              class="sticker inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
+              style="background:#fff;">
+        🎯 <span id="filters-toggle-label">Refine search</span>
+      </button>
+      <button type="button" id="filters-clear"
+              class="font-mono text-[10px] underline hidden" style="color:#7a7290;">
+        clear filters
+      </button>
+    </div>
+
+    <!-- Filters panel -->
+    <div id="filters-panel" class="nb rounded-2xl p-4 mt-2 hidden">
+      <p class="font-display font-bold text-xs mb-3" style="color:var(--violet-deep);">REFINE YOUR SEARCH <span class="font-mono font-normal" style="color:#9a92ad;">(all optional)</span></p>
+
+      <div class="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label class="font-mono text-[10px] block mb-1" style="color:#6b6480;">PREFERRED BRAND</label>
+          <input id="filter-brand" type="text" placeholder="e.g. Sony, boAt, JBL"
+                 class="w-full text-sm px-3 py-2 rounded-lg bg-transparent"
+                 style="border:2px solid var(--ink);">
+        </div>
+        <div>
+          <label class="font-mono text-[10px] block mb-1" style="color:#6b6480;">BUDGET (₹)</label>
+          <div class="flex gap-2">
+            <input id="filter-min" type="number" min="0" placeholder="Min"
+                   class="w-1/2 text-sm px-3 py-2 rounded-lg bg-transparent"
+                   style="border:2px solid var(--ink);">
+            <input id="filter-max" type="number" min="0" placeholder="Max"
+                   class="w-1/2 text-sm px-3 py-2 rounded-lg bg-transparent"
+                   style="border:2px solid var(--ink);">
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3.5">
+        <label class="font-mono text-[10px] block mb-1.5" style="color:#6b6480;">COMPARE PRICES ON</label>
+        <div class="flex flex-wrap gap-2" id="platform-checks">
+          <button type="button" class="platform-chip sticker text-xs font-bold px-3 py-1.5 rounded-full" data-platform="Amazon">Amazon</button>
+          <button type="button" class="platform-chip sticker text-xs font-bold px-3 py-1.5 rounded-full" data-platform="Flipkart">Flipkart</button>
+          <button type="button" class="platform-chip sticker text-xs font-bold px-3 py-1.5 rounded-full" data-platform="Croma">Croma</button>
+          <button type="button" class="platform-chip sticker text-xs font-bold px-3 py-1.5 rounded-full" data-platform="Reliance Digital">Reliance Digital</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <form id="composer" class="mt-2 flex items-end gap-2 nb rounded-2xl p-2">
+      <textarea
+        id="input"
+        rows="1"
+        placeholder="Ask about any product, budget, or use case…"
+        class="flex-1 resize-none bg-transparent px-3 py-2.5 text-sm focus:outline-none placeholder:text-stone-400"
+      ></textarea>
+      <button
+        type="submit"
+        id="send-btn"
+        class="nb-btn font-display font-bold text-sm px-5 py-2.5 rounded-xl"
+        style="background:var(--violet); color:#fff;"
+      >
+        Send
+      </button>
+    </form>
+    <p class="font-mono text-[10px] mt-2 px-1" style="color:#7a7290;">
+      Recommendations are grounded in live search where possible — always double-check price & availability before buying.
+    </p>
+  </main>
+
+  <footer class="relative z-10 border-t-[2.5px] mt-2" style="border-color:var(--ink);">
+    <div class="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between font-mono text-[10px]" style="color:#7a7290;">
+      <span>SHOPSENSE © 2026</span>
+      <span>POWERED BY GROQ + LIVE SEARCH</span>
+    </div>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:5000/api/chat";
+    const HEALTH_URL = "http://localhost:5000/api/health";
+
+    const chatScroll = document.getElementById("chat-scroll");
+    const form = document.getElementById("composer");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send-btn");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let history = [];
+
+    // ---------- confetti burst ----------
+    function burstConfetti(x, y) {
+      if (prefersReducedMotion) return;
+      const colors = ["#7c3aed", "#ff4d8d", "#ffd447", "#00d9a3"];
+      for (let i = 0; i < 16; i++) {
+        const el = document.createElement("div");
+        el.className = "confetti-piece";
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 55 + Math.random() * 65;
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist - 35;
+        el.style.setProperty("--tx", tx + "px");
+        el.style.setProperty("--ty", ty + "px");
+        el.style.setProperty("--rot", Math.random() * 360 + "deg");
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.background = colors[i % colors.length];
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 720);
+      }
+    }
+
+    function burstFromElement(el) {
+      const rect = el.getBoundingClientRect();
+      burstConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+
+    // ---------- tilt effect on the hero recommendation card ----------
+    const frontCard = document.getElementById("front-card");
+    if (frontCard && !prefersReducedMotion) {
+      frontCard.addEventListener("mousemove", (e) => {
+        const rect = frontCard.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        frontCard.style.animation = "none";
+        frontCard.style.transform =
+          `rotate(-2deg) perspective(700px) rotateX(${py * -16}deg) rotateY(${px * 16}deg) translateY(-4px)`;
+      });
+      frontCard.addEventListener("mouseleave", () => {
+        frontCard.style.transform = "";
+        frontCard.style.animation = "";
+      });
+    }
+
+    // ---------- filters panel ----------
+    const filtersToggle = document.getElementById("filters-toggle");
+    const filtersToggleLabel = document.getElementById("filters-toggle-label");
+    const filtersPanel = document.getElementById("filters-panel");
+    const filtersClear = document.getElementById("filters-clear");
+    const filterBrand = document.getElementById("filter-brand");
+    const filterMin = document.getElementById("filter-min");
+    const filterMax = document.getElementById("filter-max");
+    const selectedPlatforms = new Set();
+
+    filtersToggle.addEventListener("click", () => {
+      filtersPanel.classList.toggle("hidden");
+    });
+
+    document.querySelectorAll(".platform-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const platform = chip.getAttribute("data-platform");
+        if (selectedPlatforms.has(platform)) {
+          selectedPlatforms.delete(platform);
+          chip.style.background = "#fff";
+          chip.style.color = "";
+        } else {
+          selectedPlatforms.add(platform);
+          chip.style.background = "var(--violet)";
+          chip.style.color = "#fff";
+        }
+        updateFiltersSummary();
+      });
+    });
+
+    [filterBrand, filterMin, filterMax].forEach((el) => {
+      el.addEventListener("input", updateFiltersSummary);
+    });
+
+    function activeFilterCount() {
+      let n = 0;
+      if (filterBrand.value.trim()) n++;
+      if (filterMin.value || filterMax.value) n++;
+      if (selectedPlatforms.size) n++;
+      return n;
+    }
+
+    function updateFiltersSummary() {
+      const n = activeFilterCount();
+      filtersToggleLabel.textContent = n ? `Refine search (${n})` : "Refine search";
+      filtersClear.classList.toggle("hidden", n === 0);
+    }
+
+    filtersClear.addEventListener("click", () => {
+      filterBrand.value = "";
+      filterMin.value = "";
+      filterMax.value = "";
+      selectedPlatforms.clear();
+      document.querySelectorAll(".platform-chip").forEach((chip) => {
+        chip.style.background = "#fff";
+        chip.style.color = "";
+      });
+      updateFiltersSummary();
+    });
+
+    // Builds the hidden "[Filters — ...]" suffix the backend understands,
+    // and a short list of human-readable tags to show under the user's bubble.
+    function buildFilterContext() {
+      const parts = [];
+      const tags = [];
+
+      const brand = filterBrand.value.trim();
+      if (brand) {
+        parts.push(`Preferred brand: ${brand}`);
+        tags.push(`🏷️ ${brand}`);
+      }
+
+      const min = filterMin.value.trim();
+      const max = filterMax.value.trim();
+      if (min || max) {
+        const label = `₹${min || "0"}–${max || "no limit"}`;
+        parts.push(`Budget: ${label} (INR)`);
+        tags.push(`💰 ${label}`);
+      }
+
+      if (selectedPlatforms.size) {
+        const list = [...selectedPlatforms];
+        parts.push(`Compare prices on: ${list.join(", ")}`);
+        tags.push(`🛒 ${list.join(", ")}`);
+      }
+
+      return {
+        suffix: parts.length ? `\n\n[Filters — ${parts.join(" | ")}]` : "",
+        tags,
+      };
+    }
+
+    // Auto-grow textarea
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 140) + "px";
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    async function checkHealth() {
+      try {
+        const res = await fetch(HEALTH_URL);
+        const data = await res.json();
+        statusDot.style.background = "#00d9a3";
+        statusDot.classList.add("status-dot-live");
+        statusText.textContent = data.search_enabled
+          ? "live search on"
+          : "search key missing";
+        if (!data.search_enabled) {
+          statusDot.style.background = "#ffd447";
+          statusDot.classList.remove("status-dot-live");
+        }
+      } catch (e) {
+        statusDot.style.background = "#ff4d8d";
+        statusText.textContent = "backend offline";
+      }
+    }
+    checkHealth();
+
+    function scrollToBottom() {
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
+
+    function addUserMessage(text, filterTags) {
+      const wrap = document.createElement("div");
+      wrap.className = "flex flex-col items-end gap-1.5";
+      const tagsHtml = (filterTags && filterTags.length)
+        ? `<div class="flex flex-wrap gap-1.5 justify-end max-w-[80%]">
+             ${filterTags.map(t => `<span class="font-mono text-[10px] px-2 py-0.5 rounded-full" style="background:var(--yellow); border:1.5px solid var(--ink);">${escapeHtml(t)}</span>`).join("")}
+           </div>`
+        : "";
+      wrap.innerHTML = `
+        ${tagsHtml}
+        <div class="msg-user max-w-[80%] px-4 py-2.5 text-sm">
+          ${escapeHtml(text)}
+        </div>`;
+      chatScroll.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function addBotTyping() {
+      const wrap = document.createElement("div");
+      wrap.className = "flex justify-start";
+      wrap.id = "typing-indicator";
+      wrap.innerHTML = `
+        <div class="msg-bot max-w-[80%] px-4 py-3 flex items-center gap-1.5">
+          <span class="ticker-dot"></span>
+          <span class="ticker-dot"></span>
+          <span class="ticker-dot"></span>
+          <span class="font-mono text-[11px] ml-1" style="color:#7a7290;">searching &amp; thinking…</span>
+        </div>`;
+      chatScroll.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function removeBotTyping() {
+      const el = document.getElementById("typing-indicator");
+      if (el) el.remove();
+    }
+
+    function addBotMessage(markdownText, meta) {
+      const wrap = document.createElement("div");
+      wrap.className = "flex justify-start";
+      const searchNote = meta && meta.used_search
+        ? `<div class="font-mono text-[10px] mb-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full badge-live font-bold">
+             🔎 searched live web${meta.searches && meta.searches.length ? ": " + escapeHtml(meta.searches.join(", ")) : ""}
+           </div>`
+        : "";
+      wrap.innerHTML = `
+        <div class="msg-bot max-w-[85%] px-4 py-3 text-sm leading-relaxed">
+          ${searchNote}
+          ${renderMarkdown(markdownText)}
+        </div>`;
+      chatScroll.appendChild(wrap);
+      scrollToBottom();
+      if (meta && meta.used_search) burstFromElement(wrap.firstElementChild);
+    }
+
+    function addErrorMessage(text) {
+      const wrap = document.createElement("div");
+      wrap.className = "flex justify-start";
+      wrap.innerHTML = `
+        <div class="px-4 py-3 rounded-lg text-sm nb" style="background:#ffe1e8;">
+          ⚠️ ${escapeHtml(text)}
+        </div>`;
+      chatScroll.appendChild(wrap);
+      scrollToBottom();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Minimal markdown renderer: headings, bold, links, bullet lists, paragraphs
+    function renderMarkdown(md) {
+      let html = escapeHtml(md);
+
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      html = html.replace(/^### (.*)$/gm, "<h3 class='font-display font-bold mt-2 mb-1'>$1</h3>");
+      html = html.replace(/^## (.*)$/gm, "<h3 class='font-display font-bold mt-2 mb-1'>$1</h3>");
+
+      const lines = html.split("\n");
+      let out = [];
+      let inList = false;
+      for (const line of lines) {
+        const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+        if (bulletMatch) {
+          if (!inList) { out.push("<ul>"); inList = true; }
+          out.push(`<li>${bulletMatch[1]}</li>`);
+        } else {
+          if (inList) { out.push("</ul>"); inList = false; }
+          if (line.trim() === "") {
+            out.push("");
+          } else {
+            out.push(`<p>${line}</p>`);
+          }
+        }
+      }
+      if (inList) out.push("</ul>");
+      return out.join("\n");
+    }
+
+    async function sendMessage(text) {
+      const { suffix, tags } = buildFilterContext();
+      const messageToSend = text + suffix;
+
+      burstFromElement(sendBtn);
+      addUserMessage(text, tags);
+      history.push({ role: "user", content: messageToSend });
+      addBotTyping();
+      sendBtn.disabled = true;
+      input.disabled = true;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: messageToSend, history }),
+        });
+
+        const data = await res.json();
+        removeBotTyping();
+
+        if (!res.ok) {
+          addErrorMessage(data.error || "Something went wrong on the server.");
+          return;
+        }
+
+        addBotMessage(data.reply, data);
+        history.push({ role: "assistant", content: data.reply });
+      } catch (err) {
+        removeBotTyping();
+        addErrorMessage("Could not reach the backend. Is it running on port 5000?");
+      } finally {
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      input.style.height = "auto";
+      sendMessage(text);
+    });
+
+    document.querySelectorAll(".quick-prompt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const text = btn.getAttribute("data-prompt");
+        if (!text) return;
+        sendMessage(text);
+      });
+    });
+  </script>
+</body>
+</html>
