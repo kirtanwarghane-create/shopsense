@@ -8,6 +8,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+  /* Box-sizing reset — this was previously provided by Tailwind's CDN
+     "Preflight" reset. Without it, any element with width:100% (like
+     w-full) plus a border or padding will overflow its container instead
+     of shrinking to fit, which is what caused the overlapping filter
+     boxes (Preferred Brand / Budget). This one rule fixes every such
+     element on the page at once. */
+  *, *::before, *::after { box-sizing: border-box; }
+
   :root{
     --bg:#faf7ff;
     --ink:#161221;
