@@ -95,6 +95,14 @@ Rules you must follow:
      must include a link from your search results. If you cannot find a
      working product link after searching, write "(link not found)"
      instead of omitting it or making one up.
+   - CRITICAL: only use a URL if it was returned to you verbatim in a
+     `web_search` tool result. Never construct, guess, or pattern-match a
+     URL yourself (e.g. never assemble something that "looks like" a
+     realistic Amazon or Flipkart product link) — copy the exact URL
+     string from the search results. If no real URL was returned for a
+     product, use "(link not found)" instead. Any link not taken directly
+     from search results will be automatically stripped before the user
+     sees it, so inventing one only wastes effort.
    - End with a brief follow-up question if more detail from the user would
      improve the recommendation (budget, brand preference, use case, etc.)
      — but don't ask unnecessary questions if the user has already been specific.
@@ -270,6 +278,31 @@ def strip_fake_tool_syntax(text: str) -> str:
     return FAKE_TOOL_TAG_RE.sub("", text).strip()
 
 
+MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
+
+
+def verify_links(text: str, known_urls: set) -> str:
+    """Strip any Markdown link whose URL wasn't actually returned by a real
+    search this turn. Language models occasionally invent plausible-looking
+    product URLs (e.g. a believable Amazon/Flipkart product path) that
+    return 404s in reality. Since we track every URL Tavily genuinely
+    returned, we can catch and remove anything that isn't one of them,
+    replacing it with a plain-text note instead of a broken link."""
+    if not text or not known_urls:
+        # If no searches were run this turn, there's nothing to verify
+        # against — leave the text as-is (e.g. a purely conversational
+        # reply with no product links).
+        return text
+
+    def _replace(match):
+        label, url = match.group(1), match.group(2)
+        if url in known_urls:
+            return match.group(0)  # genuine link, keep as-is
+        return f"{label} (link unavailable — please search for this manually)"
+
+    return MARKDOWN_LINK_RE.sub(_replace, text)
+
+
 @app.route("/api/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "model": MODEL, "search_enabled": bool(TAVILY_API_KEY)})
@@ -316,6 +349,11 @@ def chat():
 
     used_search = False
     searches_performed = []
+    # Every URL that Tavily actually returned during this request. Used to
+    # verify (and strip, if fake) any link the model includes in its final
+    # answer — this stops the model from "inventing" plausible-looking but
+    # non-existent product URLs.
+    known_urls = set()
 
     try:
         # Allow a few rounds of tool calling in case the model wants to
@@ -365,6 +403,9 @@ def chat():
                         pass
 
                     result = run_tool_call(tc)
+                    for r in (result or {}).get("results", []):
+                        if r.get("url"):
+                            known_urls.add(r["url"])
                     messages.append(
                         {
                             "role": "tool",
@@ -385,6 +426,9 @@ def chat():
                     used_search = True
                     searches_performed.append(q)
                     result = web_search(q)
+                    for r in (result or {}).get("results", []):
+                        if r.get("url"):
+                            known_urls.add(r["url"])
                     messages.append(
                         {
                             "role": "user",
@@ -404,10 +448,12 @@ def chat():
                 # Loop again so the model can use these results properly
                 continue
 
-            # Genuine final answer -> sanitize just in case, then return it
+            # Genuine final answer -> sanitize, verify links, then return it
+            final_text = strip_fake_tool_syntax(msg.content)
+            final_text = verify_links(final_text, known_urls)
             return jsonify(
                 {
-                    "reply": strip_fake_tool_syntax(msg.content),
+                    "reply": final_text,
                     "used_search": used_search,
                     "searches": searches_performed,
                 }
