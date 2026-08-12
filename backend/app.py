@@ -48,7 +48,16 @@ client = Groq(api_key=GROQ_API_KEY)
 MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 app = Flask(__name__)
-CORS(app)  # allow the static HTML/JS frontend to call this API from any origin
+
+# Which frontend origin(s) are allowed to call this API.
+# Locally this defaults to "*" (any origin) for convenience. Once your
+# frontend is deployed (e.g. on Netlify), set FRONTEND_ORIGINS in your
+# Render environment variables to lock this down, e.g.:
+#   FRONTEND_ORIGINS=https://your-site.netlify.app
+# Multiple origins can be comma-separated.
+_origins_env = os.environ.get("FRONTEND_ORIGINS", "*").strip()
+CORS_ORIGINS = "*" if _origins_env == "*" else [o.strip() for o in _origins_env.split(",")]
+CORS(app, origins=CORS_ORIGINS)
 
 # --------------------------------------------------------------------------
 # System prompt
@@ -293,7 +302,12 @@ def chat():
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     # Keep history bounded so the request doesn't grow unbounded
-    for h in history[-20:]:
+    # Keep only the last few turns of history. This is intentionally lower
+    # than before (was 20) because Groq's free tier enforces a per-minute
+    # token cap in addition to the daily cap — sending too much history
+    # plus the system prompt in one request can trip a 413 "request too
+    # large" error even well within the daily quota.
+    for h in history[-8:]:
         role = h.get("role")
         content = h.get("content")
         if role in ("user", "assistant") and content:
@@ -306,15 +320,17 @@ def chat():
     try:
         # Allow a few rounds of tool calling in case the model wants to
         # search more than once before giving a final answer (e.g. one
-        # search per shopping platform when comparing prices).
-        for _ in range(6):
+        # search per shopping platform when comparing prices). Kept modest
+        # to keep response times reasonable — most requests finish in 1-3
+        # rounds even when comparing a couple of platforms.
+        for _ in range(4):
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
                 temperature=0.4,
-                max_tokens=1600,
+                max_tokens=1100,
             )
 
             choice = completion.choices[0]
@@ -412,9 +428,33 @@ def chat():
 
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        error_text = str(e)
+
+        # Groq's daily/rate limit errors come through as a generic exception
+        # with "rate_limit_exceeded" or a 429 status embedded in the message.
+        # Surface these as a normal, friendly chat reply instead of raw JSON,
+        # so the frontend can show it like any other assistant message.
+        if "rate_limit_exceeded" in error_text or "429" in error_text:
+            return jsonify(
+                {
+                    "reply": (
+                        "I've hit today's usage limit on the AI model powering "
+                        "ShopSense (this is a Groq API quota, not a problem "
+                        "with your request). Please try again in a little "
+                        "while — usage limits typically reset within a few "
+                        "hours. If this keeps happening, the site owner may "
+                        "need to switch to a different model or upgrade the "
+                        "Groq plan."
+                    ),
+                    "used_search": False,
+                    "searches": [],
+                }
+            )
+
+        return jsonify({"error": error_text}), 500
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)

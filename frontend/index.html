@@ -507,6 +507,12 @@
   </footer>
 
   <script>
+    // 🔧 DEPLOYMENT: replace ONLY the URL inside the "else" branch below with
+    // your live Render backend URL. This auto-detects: when you open this
+    // page from your own computer (localhost / 127.0.0.1), it talks to your
+    // local backend; once deployed to any real domain (Vercel, Netlify,
+    // etc.), it automatically talks to your deployed backend instead. No
+    // manual switching needed.
     const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
     const API_BASE = isLocal
       ? "http://localhost:5000"
