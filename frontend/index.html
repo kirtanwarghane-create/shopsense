@@ -282,6 +282,12 @@
   .msg-bot p{ margin-bottom:.5rem; }
   .msg-bot p:last-child{ margin-bottom:0; }
 
+  /* ---------- tables ---------- */
+  .msg-bot table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.85rem; }
+  .msg-bot th, .msg-bot td { border: 1.5px solid var(--ink); padding: 0.5rem 0.75rem; text-align: left; }
+  .msg-bot th { background: #f4effe; font-family: 'Unbounded', sans-serif; font-size: 0.75rem; color: var(--violet-deep); }
+  .msg-bot tr:nth-child(even) { background: #faf7ff; }
+
   .ticker-dot{
     width:7px;height:7px;border-radius:50%;
     background:var(--violet);
@@ -796,8 +802,42 @@
       const lines = html.split("\n");
       let out = [];
       let inList = false;
+      let inTable = false;
+      let isFirstTableRow = false;
+      
       for (const line of lines) {
         const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+        const isTable = line.trim().startsWith("|") && line.trim().endsWith("|");
+
+        if (isTable) {
+          if (inList) { out.push("</ul>"); inList = false; }
+          
+          if (!inTable) { 
+            out.push("<div style='overflow-x:auto;'><table>"); 
+            inTable = true; 
+            isFirstTableRow = true;
+          }
+          
+          if (line.includes("---")) {
+            isFirstTableRow = false;
+            continue; 
+          }
+          
+          const cells = line.split("|").filter((_, i, arr) => i !== 0 && i !== arr.length - 1);
+          const cellTag = isFirstTableRow ? "th" : "td";
+          
+          let tr = "<tr>";
+          for (const cell of cells) {
+            tr += `<${cellTag}>${cell.trim()}</${cellTag}>`;
+          }
+          tr += "</tr>";
+          out.push(tr);
+          isFirstTableRow = false;
+          continue;
+        } else {
+          if (inTable) { out.push("</table></div>"); inTable = false; }
+        }
+
         if (bulletMatch) {
           if (!inList) { out.push("<ul>"); inList = true; }
           out.push(`<li>${bulletMatch[1]}</li>`);
@@ -806,11 +846,17 @@
           if (line.trim() === "") {
             out.push("");
           } else {
-            out.push(`<p>${line}</p>`);
+            // Avoid wrapping HTML tags in p tags if they are block elements (like divs/tables)
+            if (line.trim().startsWith("<div") || line.trim().startsWith("<table") || line.trim().startsWith("</div")) {
+              out.push(line);
+            } else {
+              out.push(`<p>${line}</p>`);
+            }
           }
         }
       }
       if (inList) out.push("</ul>");
+      if (inTable) out.push("</table></div>");
       return out.join("\n");
     }
 

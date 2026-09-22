@@ -263,11 +263,10 @@ def run_tool_call(tool_call):
 # fake-tool-call debris from whatever text does get shown to the user.
 
 FAKE_TOOL_TAG_RE = re.compile(
-    r"<\s*/?\s*function[^>]*>|web_search\s*\(\s*\{.*?\}\s*\)|<\s*tool_call.*?</\s*tool_call\s*>|<\s*/?\s*tool_call[^>]*>|<\s*/?\s*parameter[^>]*>",
+    r"<\s*/?\s*function[^>]*>|web_search\s*\(\s*\{.*?\}\s*\)",
     re.IGNORECASE | re.DOTALL,
 )
 FAKE_QUERY_RE = re.compile(r'"query"\s*:\s*"([^"]+)"')
-XML_QUERY_RE = re.compile(r"<\s*parameter=query\s*>(.*?)<\s*/\s*parameter\s*>", re.IGNORECASE | re.DOTALL)
 
 
 def extract_fake_tool_queries(text: str):
@@ -275,11 +274,7 @@ def extract_fake_tool_queries(text: str):
     have printed instead of issuing a real tool call."""
     if not text:
         return []
-    queries = FAKE_QUERY_RE.findall(text)
-    for m in XML_QUERY_RE.findall(text):
-        if m.strip():
-            queries.append(m.strip())
-    return queries
+    return FAKE_QUERY_RE.findall(text)
 
 
 def strip_fake_tool_syntax(text: str) -> str:
@@ -287,8 +282,6 @@ def strip_fake_tool_syntax(text: str) -> str:
     it's shown to the user."""
     if not text:
         return text
-    # Strip full tool_call blocks first, then any lingering tags
-    text = re.sub(r"<\s*tool_call.*?</\s*tool_call\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
     return FAKE_TOOL_TAG_RE.sub("", text).strip()
 
 
@@ -376,27 +369,14 @@ def chat():
         # to keep response times reasonable — most requests finish in 1-3
         # rounds even when comparing a couple of platforms.
         for i in range(4):
-            if i == 1:
-                messages.append({"role": "system", "content": "You have gathered enough information. DO NOT call the web_search tool again. Please output your final recommendation to the user now in Markdown."})
-                
-            kwargs = {
-                "tools": TOOLS,
-                "tool_choice": "auto"
-            }
-                
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=messages,
+                tools=TOOLS,
+                tool_choice="auto",
                 temperature=0.4,
                 max_tokens=1000,
-                **kwargs
             )
-            if not getattr(completion, "choices", None):
-                return jsonify({
-                    "reply": "I'm sorry, the AI model encountered an error or returned an empty response (this often happens when free models are overloaded). Please try again, or try switching to another model.",
-                    "used_search": used_search,
-                    "searches": searches_performed,
-                })
 
             choice = completion.choices[0]
             msg = choice.message
@@ -451,7 +431,7 @@ def chat():
             # No real tool_calls — but check for a "fake" tool call the
             # model may have printed as plain text instead of using the
             # actual function-calling channel.
-            fake_queries = extract_fake_tool_queries(msg.content or "") if i < 1 else []
+            fake_queries = extract_fake_tool_queries(msg.content or "")
             if fake_queries:
                 messages.append({"role": "assistant", "content": msg.content or ""})
                 for q in fake_queries:
@@ -523,24 +503,15 @@ def chat():
                 {
                     "reply": (
                         "I've hit today's usage limit on the AI model powering "
-                        "ShopSense (this is an API quota limit from OpenRouter or Groq). "
-                        "Please try again in a little while — usage limits typically reset "
-                        "within a few hours or daily."
+                        "ShopSense (this is a Groq API quota, not a problem "
+                        "with your request). Please try again in a little "
+                        "while — usage limits typically reset within a few "
+                        "hours. If this keeps happening, the site owner may "
+                        "need to switch to a different model or upgrade the "
+                        "Groq plan."
                     ),
                     "used_search": False,
                     "searches": [],
-                }
-            )
-
-        if "tool_use_failed" in error_text or "Failed to parse tool call" in error_text:
-            return jsonify(
-                {
-                    "reply": (
-                        "The AI model experienced a temporary glitch while trying to format its web search. "
-                        "Please try asking your question one more time!"
-                    ),
-                    "used_search": used_search,
-                    "searches": searches_performed,
                 }
             )
 
